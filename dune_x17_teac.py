@@ -29,21 +29,21 @@ background = N_bkg_total / (sigma_p * np.sqrt(2*np.pi)) * np.exp(-0.5 * ((p_rang
 # Plot
 plt.figure(figsize=(10, 6))
 plt.plot(p_range, signal + background, 'k-', label='Total: Sinal + Bkg', lw=2)
-plt.plot(p_range, background, 'r--', label='Background $K^+ \\to \\pi^+ \\pi^0$', lw=1.5)
+plt.plot(p_range, background, 'r--', label=r'Background $K^+ \to \pi^+ \pi^0$', lw=1.5)
 plt.fill_between(p_range, 0, signal, color='orange', alpha=0.7, label='Sinal X(17)')
 plt.axvline(p_pi_sig, color='b', ls=':', label=f'Pico TEAC: {p_pi_sig:.1f} MeV/c')
 
-# Caixa de texto com valores corretos
-plt.text(227.5, 3.0e13, f'~{N_sig_total:.1e} eventos/ano\nSignificância > $10^{12}$ σ', 
+# Caixa de texto com LaTeX para evitar bug do ~
+plt.text(227.5, 3.0e13, f'$\\approx${N_sig_total:.1e} eventos/ano\nSignificância > $10^{{12}}$ σ', 
          bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray'))
 
 plt.title('Predição TEAC: X(17) no DUNE Phase-II', fontsize=14)
-plt.xlabel('Momento do $\pi^+$ [MeV/c]', fontsize=12)
+plt.xlabel(r'Momento do $\pi^+$ [MeV/c]', fontsize=12)
 plt.ylabel('Eventos / MeV / ano', fontsize=12)
 plt.legend(loc='upper left')
 plt.grid(True, alpha=0.3)
 plt.xlim(205, 235)
-plt.ylim(0, 4.0e13)  # Corrigido pra mostrar o pico inteiro
+plt.ylim(0, 4.0e13)
 plt.tight_layout()
 plt.savefig('teac_dune_x17.png', dpi=300)
 plt.show()
