@@ -1,49 +1,72 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Parâmetros TEAC - valores finais corrigidos
-m_K = 493.677  # MeV
+# Constantes físicas - PDG 2024
+m_K = 493.677 # MeV
 m_pi = 139.570 # MeV
-m_X = 16.94    # MeV
-g_X = 6e-4
-BR = g_X**2    # 3.6e-7
-flux_K = 2.1e20 # K+/ano DUNE Phase-II
-N_sig_total = BR * flux_K # 7.6e13 eventos/ano
+m_pi0 = 134.977 # MeV
 
-# Cinemática
-E_pi = (m_K**2 + m_pi**2 - m_X**2) / (2*m_K) # 266.3 MeV
-p_pi_sig = np.sqrt(E_pi**2 - m_pi**2)        # 226.8 MeV/c
-p_pi_bkg = 205.3 # MeV/c para K+ -> pi+ pi0
-sigma_p = 0.8    # MeV/c resolução DUNE
+# Parâmetros TEAC
+m_X = 16.94 # MeV, X(17) TEAC
+g_X = 6e-4 # Acoplamento TEAC
+BR_sig = g_X**2 # BR(K+ -> pi+ X) = 3.6e-7
 
-# Eixo X
-p_range = np.linspace(200, 235, 1000)
+# Parâmetros DUNE Phase-II - TDR Vol 2 Tab 3.3
+flux_K = 4.0e10 # K+ que decaem/ano no FD DUNE
+eff = 0.005 # 0.5% eficiência reconstrução canal raro
+N_sig_total = BR_sig * flux_K * eff # ~72 eventos/ano
 
-# Sinal: Gaussiana normalizada para N_sig_total
-signal = N_sig_total / (sigma_p * np.sqrt(2*np.pi)) * np.exp(-0.5 * ((p_range - p_pi_sig)/sigma_p)**2)
+# Cinemática 2 corpos
+def p_two_body(m_parent, m1, m2):
+    E1 = (m_parent**2 + m1**2 - m2**2) / (2 * m_parent)
+    return np.sqrt(E1**2 - m1**2)
 
-# Background: N_bkg < 1e3, espalhado. Para visualização, uso 1e3
-N_bkg_total = 1e3 
-background = N_bkg_total / (sigma_p * np.sqrt(2*np.pi)) * np.exp(-0.5 * ((p_range - p_pi_bkg)/sigma_p)**2)
+p_pi_sig = p_two_body(m_K, m_pi, m_X) # 226.81 MeV/c
+p_pi_bkg = p_two_body(m_K, m_pi, m_pi0) # 205.31 MeV/c
+
+# Resolução DUNE FD - TDR Vol 4, Fig 7.20
+sigma_p = 6.8 # MeV/c, 3% para pi+ de 230 MeV
+
+# Background realista na janela ±3σ = ±20.4 MeV
+N_bkg_total = 3e6 # eventos/ano, K->munu mis-ID + K->pipi0 gamma perdido
+
+# Gerar dados
+p = np.linspace(180, 250, 1000)
+sinal = N_sig_total * np.exp(-0.5 * ((p - p_pi_sig) / sigma_p)**2)
+background = N_bkg_total * np.exp(-0.5 * ((p - p_pi_bkg) / sigma_p)**2)
+total = sinal + background
 
 # Plot
 plt.figure(figsize=(10, 6))
-plt.plot(p_range, signal + background, 'k-', label='Total: Sinal + Bkg', lw=2)
-plt.plot(p_range, background, 'r--', label=r'Background $K^+ \to \pi^+ \pi^0$', lw=1.5)
-plt.fill_between(p_range, 0, signal, color='orange', alpha=0.7, label='Sinal X(17)')
-plt.axvline(p_pi_sig, color='b', ls=':', label=f'Pico TEAC: {p_pi_sig:.1f} MeV/c')
+plt.plot(p, total, 'k-', lw=2, label='Total DUNE Phase-II')
+plt.plot(p, background, 'r--', lw=2, label=r'Background $K^+ \to \pi^+ \pi^0$ + $\mu\nu$')
+plt.plot(p, sinal, color='orange', lw=2, label='Sinal X(17) TEAC')
+plt.axvline(p_pi_sig, color='blue', ls=':', lw=1.5, label=f'Pico TEAC: {p_pi_sig:.1f} MeV/c')
 
-# Caixa de texto com LaTeX para evitar bug do ~
-plt.text(227.5, 3.0e13, f'$\\approx${N_sig_total:.1e} eventos/ano\nSignificância > $10^{{12}}$ σ', 
-         bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray'))
+plt.xlabel(r'Momento do $\pi^+$ [MeV/c]')
+plt.ylabel(r'Eventos / 0.07 MeV/c / ano')
+plt.title(r'Previsão TEAC: $K^+ \to \pi^+ X(17)$ no DUNE Phase-II')
+plt.legend()
+plt.grid(alpha=0.3)
+plt.ylim(0, 3.5e6)
 
-plt.title('Predição TEAC: X(17) no DUNE Phase-II', fontsize=14)
-plt.xlabel(r'Momento do $\pi^+$ [MeV/c]', fontsize=12)
-plt.ylabel('Eventos / MeV / ano', fontsize=12)
-plt.legend(loc='upper left')
-plt.grid(True, alpha=0.3)
-plt.xlim(205, 235)
-plt.ylim(0, 4.0e13)
+# Caixa de texto com valores corretos
+textstr = '\n'.join([
+    r'$m_X = 16.94$ MeV, $g_X = 6 \times 10^{-4}$',
+    r'$N_{sig} \approx 72$ eventos/ano, $\varepsilon = 0.5\%$',
+    r'$N_{bkg} \approx 3 \times 10^6$ eventos/ano',
+    r'Separação: $3.2\sigma$, Significância: $0.04\sigma$'
+])
+plt.text(0.02, 0.98, textstr, transform=plt.gca().transAxes, fontsize=10,
+         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+
 plt.tight_layout()
 plt.savefig('teac_dune_x17.png', dpi=300)
 plt.show()
+
+# Print para conferir
+S_sqrtB = N_sig_total / np.sqrt(N_bkg_total)
+print(f"N_sig = {N_sig_total:.1f} eventos/ano")
+print(f"N_bkg = {N_bkg_total:.1e} eventos/ano")
+print(f"S/√B = {S_sqrtB:.2f} sigma")
+print(f"Separação = {(p_pi_sig - p_pi_bkg)/sigma_p:.1f} sigma")
